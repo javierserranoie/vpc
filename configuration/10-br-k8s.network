@@ -1,0 +1,8 @@
+[Match]
+Name=en*
+
+[Network]
+Address=10.100.1.${VM_ID}0/24
+Gateway=10.100.1.1
+DNS=10.100.1.1
+
