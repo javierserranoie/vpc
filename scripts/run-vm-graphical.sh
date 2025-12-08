@@ -3,8 +3,8 @@
 set -euo pipefail
 
 VM_ID="${VM_ID:-1}"
-VM_IMG="${VM_IMG:-images/arch-vm${VM_ID}.qcow2}"
-
+VM_IMG="${VM_IMG:-images/linux-$VM_ID.qcow2}"
+VM_PORT=$(printf '%02u' "$VM_ID")
 MAC_SUFFIX=$(printf '%02x' "$VM_ID")
 VM_MAC="52:54:00:12:34:${MAC_SUFFIX}"
 
@@ -12,8 +12,7 @@ qemu-system-x86_64 \
     -enable-kvm \
     -cpu host \
     -m 7632 \
-    -smp cpus=2,sockets=1,cores=2,threads=1 \
+    -smp cpus=4,sockets=1,cores=4,threads=1 \
     -drive file=${VM_IMG},if=virtio,format=qcow2 \
-    -netdev tap,id=n${VM_ID},ifname="tap-k8s${VM_ID}",script=no,downscript=no \
-    -device virtio-net,netdev=n${VM_ID},mac="${VM_MAC}" \
-    -daemonize -display none
+    -netdev user,id=n${VM_ID},hostfwd=tcp::22${VM_PORT}-:22 \
+    -device virtio-net,netdev=n${VM_ID},mac="${VM_MAC}"

@@ -2,7 +2,6 @@
 # qemu-img create -f qcow2 -F qcow2 -b arch.qcow2 arch-vm1.qcow2
 set -euo pipefail
 
-ISO="${ISO:-/home/js/Downloads/linux.iso}"
 VM_ID="${VM_ID:-1}"
 VM_IMG="${VM_IMG:-images/linux-$VM_ID.qcow2}"
 VM_PORT=$(printf '%02u' "$VM_ID")
@@ -17,5 +16,4 @@ qemu-system-x86_64 \
     -drive file=${VM_IMG},if=virtio,format=qcow2 \
     -netdev user,id=n${VM_ID},hostfwd=tcp::22${VM_PORT}-:22 \
     -device virtio-net,netdev=n${VM_ID},mac="${VM_MAC}" \
-    -cdrom ${ISO} \
-    -boot d
+    -daemonize -display none

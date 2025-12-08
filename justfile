@@ -2,32 +2,32 @@ default:
     just --list
 
 setup:
-    scripts/setup-k8s-vpc.sh
+    scripts/setup-vpc.sh
 
-run VM_ID:
-    VM_ID={{VM_ID}} scripts/run-vm-no-ssh.sh 
+run VM_ID MODE:
+    case "{{ MODE }}" in
+    terminal)
+        VM_ID={{VM_ID}} scripts/run-vm-terminal.sh 
+        ;;
+    graphical)
+        VM_ID={{VM_ID}} scripts/run-vm-graphical.sh 
+        ;;
+    vps)
+        VM_ID={{VM_ID}} scripts/run-vm-vps.sh 
+        ;;
+    *)
+        VM_ID={{VM_ID}} scripts/run-vm-terminal.sh 
+        ;;
+    esac
 
-setup-vm VM_ID:
+setup VM_ID:
     VM_ID={{VM_ID}} scripts/run-vm-setup.sh
     VM_ID={{VM_ID}} scripts/network-setup.sh
 
-run-k8s:
-    VM_ID=1 scripts/run-vm-ssh.sh
-    VM_ID=2 scripts/run-vm-ssh.sh
-    VM_ID=3 scripts/run-vm-ssh.sh
-    sleep 30
-    scp ./configuration/*.config js@10.100.1.10:~/
-    scp ./configuration/*.config js@10.100.1.20:~/
-    scp ./configuration/*.config js@10.100.1.30:~/
-    scp ./configuration/*.ssh js@10.100.1.10:~/
-    scp ./configuration/*.ssh js@10.100.1.20:~/
-    scp ./configuration/*.ssh js@10.100.1.30:~/
-
-run-no-ssh VM_ID:
-    VM_ID={{VM_ID}} scripts/run-vm-no-ssh.sh 
-
-run-ssh VM_ID:
-    VM_ID={{VM_ID}} scripts/run-vm-ssh.sh 
+run-vpc:
+    VM_ID=1 scripts/run-vm-vps.sh
+    VM_ID=2 scripts/run-vm-vps.sh
+    VM_ID=3 scripts/run-vm-vps.sh
 
 stop-all:
     #!/usr/bin/env bash
