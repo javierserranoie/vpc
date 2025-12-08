@@ -7,6 +7,7 @@ VM_IMG="${VM_IMG:-images/linux-$VM_ID.qcow2}"
 VM_PORT=$(printf '%02u' "$VM_ID")
 MAC_SUFFIX=$(printf '%02x' "$VM_ID")
 VM_MAC="52:54:00:12:34:${MAC_SUFFIX}"
+TAP_IF="tap-k8s${VM_ID}"
 
 qemu-system-x86_64 \
     -enable-kvm \
@@ -14,6 +15,6 @@ qemu-system-x86_64 \
     -m 7632 \
     -smp cpus=2,sockets=1,cores=2,threads=1 \
     -drive file=${VM_IMG},if=virtio,format=qcow2 \
-    -netdev tap,id=n${VM_ID},ifname="tap-k8s${VM_ID}",script=no,downscript=no \
+    -netdev tap,id=n${VM_ID},ifname=${TAP_IF},script=no,downscript=no \
     -device virtio-net,netdev=n${VM_ID},mac="${VM_MAC}" \
     -daemonize -display none
