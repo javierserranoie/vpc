@@ -10,7 +10,7 @@ VM_MAC="52:54:00:12:34:${MAC_SUFFIX}"
 VM_SIZE=${VM_SIZE:-25G}
 
 OVMF_CODE=/usr/share/OVMF/x64/OVMF_CODE.4m.fd
-OVMF_VARS=/home/js/workspace/personal/vpc/OVMF_VARS.4m.fd
+OVMF_VARS=$HOME/workspace/vpc-qemu/OVMF_VARS.4m.fd
 
 [ ! -f "$OVMF_VARS" ] && cp /usr/share/OVMF/x64/OVMF_VARS.4m.fd "$OVMF_VARS"
 
