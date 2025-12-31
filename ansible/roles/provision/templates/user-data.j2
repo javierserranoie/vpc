@@ -1,6 +1,7 @@
 #cloud-config
 hostname: {{ inventory_hostname }}
 locale: en_US.UTF-8
+package_update: true
 keyboard:
   layout: es
 ssh_pwauth: true
@@ -26,7 +27,7 @@ runcmd:
   - echo "debian:{{ debian_user_password }}" | chpasswd
   - locale-gen en_US.UTF-8
   - update-locale LANG=en_US.UTF-8
-  - DEBIAN_FRONTEND=noninteractive apt-get update
+  - while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do sleep 1; done
   - echo "keyboard-configuration keyboard-configuration/layoutcode string es" | debconf-set-selections
   - echo "keyboard-configuration keyboard-configuration/variantcode string " | debconf-set-selections
   - echo "keyboard-configuration keyboard-configuration/modelcode string pc105" | debconf-set-selections
@@ -34,3 +35,20 @@ runcmd:
   - sed -i 's/XKBLAYOUT=.*/XKBLAYOUT="es"/' /etc/default/keyboard || echo 'XKBLAYOUT="es"' >> /etc/default/keyboard
   - sed -i 's/XKBVARIANT=.*/XKBVARIANT=""/' /etc/default/keyboard || echo 'XKBVARIANT=""' >> /etc/default/keyboard
   - sed -i 's/XKBMODEL=.*/XKBMODEL="pc105"/' /etc/default/keyboard || echo 'XKBMODEL="pc105"' >> /etc/default/keyboard
+  - setupcon -k
+  - localectl set-keymap es || true
+  - localectl set-x11-keymap es || true
+  - mkdir -p /etc/X11/xorg.conf.d
+  - echo 'Section "InputClass"' > /etc/X11/xorg.conf.d/00-keyboard.conf
+  - echo '  Identifier "system keyboard"' >> /etc/X11/xorg.conf.d/00-keyboard.conf
+  - echo '  MatchIsKeyboard "on"' >> /etc/X11/xorg.conf.d/00-keyboard.conf
+  - echo '  Option "XkbLayout" "es"' >> /etc/X11/xorg.conf.d/00-keyboard.conf
+  - echo '  Option "XkbModel" "pc105"' >> /etc/X11/xorg.conf.d/00-keyboard.conf
+  - echo 'EndSection' >> /etc/X11/xorg.conf.d/00-keyboard.conf
+  - systemctl enable ssh
+  - systemctl start ssh
+  - systemctl enable sshd
+  - systemctl start sshd
+  - sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  - sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  - systemctl restart ssh || systemctl restart sshd || true

@@ -2,3 +2,4 @@
 JOIN_INSTRUCTIONS.md
 images/
 OVMF_VARS*
+cloudinit/
