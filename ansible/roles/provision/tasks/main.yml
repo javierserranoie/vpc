@@ -1,0 +1,249 @@
+---
+- name: Set absolute paths
+  set_fact:
+    base_debian_image_abs: "{{ project_root }}/{{ base_debian_image }}"
+    cloudinit_dir_abs: "{{ project_root }}/{{ cloudinit_dir }}"
+    vm_images_dir_abs: "{{ project_root }}/{{ vm_images_dir }}"
+    ovmf_vars_dir_abs: "{{ project_root }}/{{ ovmf_vars_dir }}"
+
+- name: Ensure directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ cloudinit_dir_abs }}"
+    - "{{ vm_images_dir_abs }}"
+    - "{{ ovmf_vars_dir_abs }}"
+
+- name: Find SSH public key file
+  find:
+    paths: "{{ ansible_env.HOME }}/.ssh"
+    patterns:
+      - "id_rsa.pub"
+      - "id_ed25519.pub"
+      - "id_ecdsa.pub"
+      - "id_dsa.pub"
+    file_type: file
+  register: ssh_key_files
+  delegate_to: localhost
+  run_once: true
+  when: ansible_ssh_public_key_file is not defined
+
+- name: Set SSH public key file path from found files
+  set_fact:
+    ansible_ssh_public_key_file: "{{ ssh_key_files.files[0].path }}"
+  when:
+    - ansible_ssh_public_key_file is not defined
+    - ssh_key_files.files | length > 0
+  delegate_to: localhost
+  run_once: true
+
+- name: Set default SSH public key file if not found
+  set_fact:
+    ansible_ssh_public_key_file: "{{ ansible_env.HOME }}/.ssh/id_rsa.pub"
+  when: ansible_ssh_public_key_file is not defined
+  delegate_to: localhost
+  run_once: true
+
+- name: Check if SSH public key file exists
+  stat:
+    path: "{{ ansible_ssh_public_key_file }}"
+  register: ssh_key_file_stat
+  delegate_to: localhost
+  run_once: true
+
+- name: Get SSH public key content
+  set_fact:
+    ssh_public_key: "{{ lookup('file', ansible_ssh_public_key_file) }}"
+  when: 
+    - ansible_ssh_public_key_content is not defined
+    - ssh_public_key is not defined
+    - ssh_key_file_stat.stat.exists
+  delegate_to: localhost
+  run_once: true
+
+- name: Fail if SSH public key is not available
+  fail:
+    msg: "SSH public key not found. Set ansible_ssh_public_key_content or ansible_ssh_public_key_file, or ensure a public key exists in ~/.ssh/ (id_rsa.pub, id_ed25519.pub, id_ecdsa.pub, or id_dsa.pub)."
+  when: 
+    - ansible_ssh_public_key_content is not defined
+    - ssh_public_key is not defined
+  run_once: true
+
+- name: Ensure cloud-init directory for VM exists
+  file:
+    path: "{{ cloudinit_dir_abs }}/{{ inventory_hostname }}"
+    state: directory
+    mode: '0755'
+
+- name: Check if mkpasswd is available
+  command: which mkpasswd
+  register: mkpasswd_check
+  delegate_to: localhost
+  changed_when: false
+  failed_when: false
+
+- name: Generate password hash for debian user using mkpasswd
+  shell: mkpasswd -m sha-512 '{{ debian_user_password }}'
+  register: debian_password_hash_mkpasswd
+  delegate_to: localhost
+  changed_when: false
+  when: mkpasswd_check.rc == 0
+
+- name: Generate password hash for debian user using openssl
+  shell: |
+    SALT=$(openssl rand -base64 12 | tr -d '=+/' | cut -c1-16)
+    openssl passwd -6 -salt "$SALT" '{{ debian_user_password }}'
+  register: debian_password_hash_openssl
+  delegate_to: localhost
+  changed_when: false
+  when: mkpasswd_check.rc != 0
+
+- name: Set debian password hash fact from mkpasswd
+  set_fact:
+    debian_password_hash: "{{ debian_password_hash_mkpasswd.stdout }}"
+  when:
+    - mkpasswd_check.rc == 0
+    - debian_password_hash_mkpasswd.stdout is defined
+
+- name: Set debian password hash fact from openssl
+  set_fact:
+    debian_password_hash: "{{ debian_password_hash_openssl.stdout }}"
+  when:
+    - mkpasswd_check.rc != 0
+    - debian_password_hash_openssl.stdout is defined
+
+- name: Generate cloud-init user-data
+  template:
+    src: user-data.j2
+    dest: "{{ cloudinit_dir_abs }}/{{ inventory_hostname }}/user-data"
+    mode: '0644'
+
+- name: Generate cloud-init meta-data
+  template:
+    src: meta-data.j2
+    dest: "{{ cloudinit_dir_abs }}/{{ inventory_hostname }}/meta-data"
+    mode: '0644'
+
+- name: Remove old cloud-init ISO to force regeneration
+  file:
+    path: "{{ cloudinit_dir_abs }}/{{ inventory_hostname }}-cloud-init.iso"
+    state: absent
+
+- name: Check if cloud-localds is available
+  command: which cloud-localds
+  register: cloud_localds_check
+  changed_when: false
+  failed_when: false
+
+- name: Fail if cloud-localds is not available
+  fail:
+    msg: "cloud-localds is required but not found. Please install it: pacman -S cloud-init"
+  when: cloud_localds_check.rc != 0
+
+- name: Create cloud-init ISO with cloud-localds
+  shell: |
+    cloud-localds "{{ cloudinit_dir_abs }}/{{ inventory_hostname }}-cloud-init.iso" \
+      "{{ cloudinit_dir_abs }}/{{ inventory_hostname }}/user-data" \
+      "{{ cloudinit_dir_abs }}/{{ inventory_hostname }}/meta-data"
+  register: cloud_iso_result
+
+- name: Verify cloud-init ISO has correct lowercase filenames
+  shell: |
+    isoinfo -i "{{ cloudinit_dir_abs }}/{{ inventory_hostname }}-cloud-init.iso" -l | grep -i "user-data\|meta-data" | head -2
+  register: iso_files_check
+  changed_when: false
+  failed_when: false
+
+- name: Fail if ISO has uppercase filenames
+  fail:
+    msg: "Cloud-init ISO has uppercase filenames. This indicates cloud-localds is not working correctly. Check: isoinfo -i {{ cloudinit_dir_abs }}/{{ inventory_hostname }}-cloud-init.iso -l"
+  when: 
+    - iso_files_check.stdout is defined
+    - "'USER_DAT' in iso_files_check.stdout or 'META_DAT' in iso_files_check.stdout"
+
+- name: Check if base Debian image exists
+  stat:
+    path: "{{ base_debian_image_abs }}"
+  register: base_image_stat
+
+- name: Fail if base Debian image does not exist
+  fail:
+    msg: "Base Debian image not found at {{ base_debian_image_abs }}"
+  when: not base_image_stat.stat.exists
+
+- name: Check if VM disk image exists
+  stat:
+    path: "{{ vm_images_dir_abs }}/{{ inventory_hostname }}.qcow2"
+  register: vm_disk_stat
+
+- name: Remove existing VM disk image to force cloud-init to run again
+  file:
+    path: "{{ vm_images_dir_abs }}/{{ inventory_hostname }}.qcow2"
+    state: absent
+  when: cloudinit_force_recreate | default(false)
+
+- name: Create VM disk image from base Debian image
+  shell: |
+    qemu-img create -f qcow2 -F qcow2 -b "{{ base_debian_image_abs }}" \
+      "{{ vm_images_dir_abs }}/{{ inventory_hostname }}.qcow2" \
+      "{{ vm_disk_size }}"
+  args:
+    creates: "{{ vm_images_dir_abs }}/{{ inventory_hostname }}.qcow2"
+  when: not vm_disk_stat.stat.exists
+
+- name: Check if OVMF vars file exists
+  stat:
+    path: "{{ ovmf_vars_dir_abs }}/OVMF_VARS_{{ vm_id }}.4m.fd"
+  register: ovmf_vars_stat
+
+- name: Create OVMF vars file for VM
+  copy:
+    src: "{{ ovmf_code_dir }}/OVMF_VARS.4m.fd"
+    dest: "{{ ovmf_vars_dir_abs }}/OVMF_VARS_{{ vm_id }}.4m.fd"
+    remote_src: false
+    mode: '0644'
+  when: not ovmf_vars_stat.stat.exists
+
+- name: Check if VM is already running
+  shell: pgrep -f "{{ inventory_hostname }}.qcow2" || true
+  register: vm_running_check
+  changed_when: false
+  failed_when: false
+
+- name: Start VM with QEMU
+  shell: |
+    qemu-system-x86_64 \
+      -enable-kvm \
+      -cpu host \
+      -smp sockets=1,cores={{ vm_cpus }},threads=1 \
+      -m size={{ vm_memory }},slots=2,maxmem={{ vm_max_memory }} \
+      -blockdev node-name=ovmf_code_file,driver=file,filename="{{ ovmf_code_dir }}/OVMF_CODE.4m.fd",read-only=on \
+      -blockdev node-name=ovmf_code,driver=raw,file=ovmf_code_file,read-only=on \
+      -blockdev node-name=ovmf_vars_file,driver=file,filename="{{ ovmf_vars_dir_abs }}/OVMF_VARS_{{ vm_id }}.4m.fd" \
+      -blockdev node-name=ovmf_vars,driver=raw,file=ovmf_vars_file \
+      -machine q35,accel=kvm,pflash0=ovmf_code,pflash1=ovmf_vars \
+      -blockdev driver=file,filename="{{ cloudinit_dir_abs }}/{{ inventory_hostname }}-cloud-init.iso",read-only=on,node-name=ci_file \
+      -blockdev driver=raw,file=ci_file,node-name=ci_raw \
+      -device ide-cd,drive=ci_raw \
+      -blockdev driver=file,filename="{{ vm_images_dir_abs }}/{{ inventory_hostname }}.qcow2",node-name=drive0_file \
+      -blockdev driver=qcow2,file=drive0_file,node-name=drive0_qcow2 \
+      -device virtio-blk-pci,drive=drive0_qcow2,bootindex=1 \
+      -netdev tap,id=nic{{ vm_id }},ifname={{ tap_interface }},script=no,downscript=no \
+      -device virtio-net,netdev=nic{{ vm_id }},mac="{{ vm_mac_address }}" \
+      -daemonize -display none \
+      -name {{ inventory_hostname }}
+  when: vm_running_check.stdout == ""
+  async: 1
+  poll: 0
+  register: vm_start_result
+
+- name: Wait for VM to be accessible via SSH
+  wait_for:
+    host: "{{ ansible_host | default(inventory_hostname) }}"
+    port: 22
+    delay: 10
+    timeout: 300
+  when: vm_running_check.stdout == ""
+  delegate_to: localhost

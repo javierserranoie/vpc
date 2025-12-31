@@ -1,0 +1,25 @@
+---
+# Base Debian image path (relative to project root)
+base_debian_image: "images/debian-13-generic-amd64.qcow2"
+
+# VM configuration directories (relative to project root)
+cloudinit_dir: "cloudinit/vms"
+vm_images_dir: "images"
+ovmf_code_dir: "/usr/share/OVMF/x64"
+ovmf_vars_dir: "ovmf_vars"
+
+# Project root (will be set in playbook)
+project_root: "{{ playbook_dir }}/../.."
+
+# VM resource configuration
+vm_cpus: 2
+vm_memory: "4G"
+vm_max_memory: "4G"
+vm_disk_size: "25G"
+
+# TAP interface naming pattern (will be set per host)
+tap_interface: "tap-k8s{{ vm_id }}"
+
+# User password for debian user (default: debian)
+# To set a custom password, override this variable in your playbook or inventory
+debian_user_password: "debian"

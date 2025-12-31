@@ -1,0 +1,27 @@
+#cloud-config
+hostname: {{ inventory_hostname }}
+locale: en_US.UTF-8
+ssh_pwauth: true
+users:
+  - name: debian
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    lock_passwd: false
+    passwd: "{{ debian_password_hash | default(debian_user_password | password_hash('sha512')) }}"
+    groups: [adm, audio, cdrom, dialout, dip, floppy, lxd, netdev, plugdev, sudo, video]
+    ssh_authorized_keys:
+      - {{ ansible_ssh_public_key_content | default(ssh_public_key) }}
+
+runcmd:
+  - echo "debian:{{ debian_user_password }}" | chpasswd
+  - locale-gen en_US.UTF-8
+  - update-locale LANG=en_US.UTF-8
+  - sed -i 's/XKBLAYOUT=.*/XKBLAYOUT="es"/' /etc/default/keyboard || echo 'XKBLAYOUT="es"' >> /etc/default/keyboard
+  - setupcon -k || localectl set-keymap es || true
+  - systemctl enable ssh
+  - systemctl start ssh
+  - systemctl enable sshd
+  - systemctl start sshd
+  - sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  - sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  - systemctl restart ssh || systemctl restart sshd || true

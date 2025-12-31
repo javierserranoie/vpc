@@ -1,0 +1,23 @@
+---
+- name: Provision VMs from inventory
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  become: no
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    project_root: "{{ playbook_dir }}/../.."
+  tasks:
+    - name: Provision VM
+      include_role:
+        name: provision
+      vars:
+        inventory_hostname: "{{ vm_host }}"
+        vm_id: "{{ hostvars[vm_host]['vm_id'] }}"
+        ansible_host: "{{ hostvars[vm_host]['ansible_host'] }}"
+        vm_mac_address: "52:54:00:12:34:{{ '%02x' | format(hostvars[vm_host]['vm_id']) }}"
+        tap_interface: "tap-k8s{{ hostvars[vm_host]['vm_id'] }}"
+      loop: "{{ groups['all'] }}"
+      loop_control:
+        loop_var: vm_host
+        label: "{{ vm_host }}"

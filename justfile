@@ -4,22 +4,23 @@ default:
 setup ISO IMG="./images/linux.qcow2":
     ISO={{ISO}} VM_IMG={{IMG}} scripts/run-vm-bootstrap.sh
 
-run MODE VM_IMG VM_ID="1":
-    #!/usr/bin/env bash
-    case "{{ MODE }}" in
-    t|terminal)
-        VM_IMG={{VM_IMG}} VM_ID={{VM_ID}} scripts/run-vm-terminal.sh 
-        ;;
-    g|graphical)
-        VM_IMG={{VM_IMG}} VM_ID={{VM_ID}} scripts/run-vm-graphical.sh 
-        ;;
-    v|vps)
-        VM_IMG={{VM_IMG}} VM_ID={{VM_ID}} scripts/run-vm-vps.sh 
-        ;;
-    *)
-        VM_IMG={{VM_IMG}} VM_ID={{VM_ID}} scripts/run-vm-terminal.sh 
-        ;;
-    esac
+# Run VM with the new simplified script
+# Usage: just run [options] <image.qcow2> [VM_ID]
+# Options (must come before image):
+#   -t  Terminal/nographic mode
+#   -g  Graphical mode (default)
+#   -c  Skip cloud-init ISO
+# Arguments:
+#   image.qcow2  Path to VM disk image (required)
+#   VM_ID        VM ID number (default: 1)
+# Examples:
+#   just run images/node-1.qcow2
+#   just run -t images/node-1.qcow2
+#   just run -t images/node-1.qcow2 2
+#   just run -c images/node-1.qcow2
+#   just run -t -c images/node-1.qcow2 3
+run *ARGS:
+    scripts/run-vm.sh {{ARGS}}
 
 setup-vpc:
     scripts/setup-vpc.sh
