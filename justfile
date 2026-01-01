@@ -20,7 +20,7 @@ setup ISO IMG="./images/linux.qcow2":
 #   just run -c images/node-1.qcow2
 #   just run -t -c images/node-1.qcow2 3
 run *ARGS:
-    scripts/run-vm-vps.sh {{ARGS}}
+    scripts/run-vm.sh {{ARGS}}
 
 setup-vpc:
     scripts/setup-vpc.sh
