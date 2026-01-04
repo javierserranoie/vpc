@@ -26,9 +26,9 @@ setup-vpc:
     scripts/setup-vpc.sh
 
 run-vpc:
-    VM_ID=1 VM_IMG=images/node-1.qcow2 scripts/run-vm-vps.sh
-    VM_ID=2 VM_IMG=images/node-2.qcow2 scripts/run-vm-vps.sh
-    #VM_ID=3 VM_IMG=images/node-3.qcow2 scripts/run-vm-vps.sh
+    scripts/run-vm-vps.sh images/node-1.qcow2 1
+    scripts/run-vm-vps.sh images/node-2.qcow2 2
+    #scripts/run-vm-vps.sh images/node-3.qcow2 3
 
 stop:
     ssh root@10.100.1.30 'poweroff'
@@ -48,6 +48,9 @@ configure-vms:
 # Setup/provision VMs using Ansible
 setup-vm:
     cd ansible && ansible-playbook playbooks/provision.yml
+
+configure-vm:
+    cd ansible && ansible-playbook playbooks/main.yml
 
 # Clean up all VM-related files created by Ansible
 clean-vm:

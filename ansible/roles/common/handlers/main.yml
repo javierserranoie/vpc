@@ -1,7 +1,8 @@
 ---
-- name: restart systemd-networkd
+- name: reload systemd-networkd
   systemd:
     name: systemd-networkd
-    state: restarted
+    state: reloaded
+    daemon_reload: yes
     enabled: true
   when: ansible_service_mgr == "systemd"

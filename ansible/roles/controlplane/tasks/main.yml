@@ -15,6 +15,3 @@
     var: controlplane_config_result.stdout_lines
   when: controlplane_config_result.stdout_lines is defined
 
-- name: Save and restart iptables
-  command: /usr/local/bin/fix_iptables.sh
-  changed_when: true

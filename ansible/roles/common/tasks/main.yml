@@ -10,7 +10,7 @@
     src: 10-br-k8s.network.j2
     dest: /etc/systemd/network/10-br-k8s.network
     mode: '0644'
-  notify: restart systemd-networkd
+  notify: reload systemd-networkd
 
 - name: Ensure scripts directory exists
   file:

@@ -4,22 +4,23 @@
   become: yes
   roles:
     - common
+    - kubernetes
 
-- name: Apply role-specific configurations
-  hosts: all
-  become: yes
-  tasks:
-    - name: Apply controlplane configurations
-      include_role:
-        name: controlplane
-      when: role == 'controlplane'
-
-    - name: Apply kubernetes configurations
-      include_role:
-        name: kubernetes
-      when: role in ['controlplane', 'worker']
-
-    - name: Apply worker configurations
-      include_role:
-        name: worker
-      when: role == 'worker'
+#- name: Apply role-specific configurations
+#  hosts: all
+#  become: yes
+#  tasks:
+#    - name: Apply controlplane configurations
+#      include_role:
+#        name: controlplane
+#      when: role == 'controlplane'
+#
+#    - name: Apply kubernetes configurations
+#      include_role:
+#        name: kubernetes
+#      when: role in ['controlplane', 'worker']
+#
+#    - name: Apply worker configurations
+#      include_role:
+#        name: worker
+#      when: role == 'worker'

@@ -17,44 +17,44 @@ ATTACH_CLOUDINIT="${ATTACH_CLOUDINIT:-true}"
 # Parse options first (must come before image path)
 while [[ $# -gt 0 && $1 =~ ^- ]]; do
     case $1 in
-        -g|--graphical)
-            DISPLAY_MODE="graphical"
-            shift
-            ;;
-        -t|--terminal)
-            DISPLAY_MODE="terminal"
-            shift
-            ;;
-        -c|--no-cloudinit)
-            ATTACH_CLOUDINIT="false"
-            shift
-            ;;
-        -h|--help)
-            echo "Usage: $0 [options] <image.qcow2> [VM_ID]"
-            echo ""
-            echo "Options (must come before image path):"
-            echo "  -g, --graphical      Use graphical display (default)"
-            echo "  -t, --terminal       Use terminal/nographic mode"
-            echo "  -c, --no-cloudinit   Skip attaching cloud-init ISO"
-            echo "  -h, --help           Show this help message"
-            echo ""
-            echo "Arguments:"
-            echo "  image.qcow2          Path to the VM disk image (required)"
-            echo "  VM_ID                VM ID number (default: 1)"
-            echo ""
-            echo "Examples:"
-            echo "  $0 images/node-1.qcow2"
-            echo "  $0 -t images/node-1.qcow2"
-            echo "  $0 -t images/node-1.qcow2 2"
-            echo "  $0 -c images/node-1.qcow2"
-            echo "  $0 -t -c images/node-1.qcow2 3"
-            exit 0
-            ;;
-        -*)
-            echo "Unknown option: $1"
-            echo "Use -h or --help for usage information"
-            exit 1
-            ;;
+    -g | --graphical)
+        DISPLAY_MODE="graphical"
+        shift
+        ;;
+    -t | --terminal)
+        DISPLAY_MODE="terminal"
+        shift
+        ;;
+    -c | --no-cloudinit)
+        ATTACH_CLOUDINIT="false"
+        shift
+        ;;
+    -h | --help)
+        echo "Usage: $0 [options] <image.qcow2> [VM_ID]"
+        echo ""
+        echo "Options (must come before image path):"
+        echo "  -g, --graphical      Use graphical display (default)"
+        echo "  -t, --terminal       Use terminal/nographic mode"
+        echo "  -c, --no-cloudinit   Skip attaching cloud-init ISO"
+        echo "  -h, --help           Show this help message"
+        echo ""
+        echo "Arguments:"
+        echo "  image.qcow2          Path to the VM disk image (required)"
+        echo "  VM_ID                VM ID number (default: 1)"
+        echo ""
+        echo "Examples:"
+        echo "  $0 images/node-1.qcow2"
+        echo "  $0 -t images/node-1.qcow2"
+        echo "  $0 -t images/node-1.qcow2 2"
+        echo "  $0 -c images/node-1.qcow2"
+        echo "  $0 -t -c images/node-1.qcow2 3"
+        exit 0
+        ;;
+    -*)
+        echo "Unknown option: $1"
+        echo "Use -h or --help for usage information"
+        exit 1
+        ;;
     esac
 done
 
@@ -155,7 +155,7 @@ fi
 # Calculate MAC address and SSH port based on VM_ID
 MAC_SUFFIX=$(printf '%02x' "$VM_ID")
 VM_MAC="52:54:00:12:34:${MAC_SUFFIX}"
-SSH_PORT=$((2220 + VM_ID))
+SSH_PORT="22${MAC_SUFFIX}"
 
 QEMU_CMD+=(
     -netdev "user,id=nic0,hostfwd=tcp::${SSH_PORT}-:22"

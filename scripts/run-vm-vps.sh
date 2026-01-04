@@ -27,9 +27,6 @@ OVMF_CODE=/usr/share/OVMF/x64/OVMF_CODE.4m.fd
 
 [ ! -f "$OVMF_VARS" ] && cp /usr/share/OVMF/x64/OVMF_VARS.4m.fd "$OVMF_VARS"
 
-CLOUDINIT_DIR="${PROJECT_ROOT}/cloudinit/vms"
-CLOUDINIT_ISO="${CLOUDINIT_DIR}/${VM_NAME}-cloud-init.iso"
-
 qemu-system-x86_64 \
     -enable-kvm \
     -cpu host \
@@ -43,9 +40,6 @@ qemu-system-x86_64 \
     -blockdev driver=file,filename=${VM_IMG},node-name=drive0_file \
     -blockdev driver=qcow2,file=drive0_file,node-name=drive0_qcow2 \
     -device virtio-blk-pci,drive=drive0_qcow2,bootindex=1 \
-    -blockdev driver=file,filename=${CLOUDINIT_ISO},read-only=on,node-name=ci_file \
-    -blockdev driver=raw,file=ci_file,node-name=ci_raw \
-    -device ide-cd,drive=ci_raw \
     -netdev tap,id=nic${VM_ID},ifname=${TAP_IF},script=no,downscript=no \
-    -device virtio-net,netdev=nic${VM_ID},mac="${VM_MAC}"
-#-daemonize -display none
+    -device virtio-net,netdev=nic${VM_ID},mac="${VM_MAC}" \
+    -daemonize -display none
